@@ -7,6 +7,8 @@ const createApiRouter = require('./routes/api');
 
 const app = express();
 const port = process.env.PORT || 3000;
+// Configuración de credenciales de administrador
+//(son datos quemados, cuando se defina la base de datos se cambia)
 const adminCredentials = {
   username: process.env.ADMIN_USER || 'admin',
   password: process.env.ADMIN_PASSWORD || 'admin123',
