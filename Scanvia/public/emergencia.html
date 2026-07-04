@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Perfil de Emergencia | Scanvia</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="page page-emergencia">
+  <main class="emergency-shell">
+    <section class="emergency-card">
+      <p class="eyebrow">Perfil de emergencia</p>
+      <h1 id="emergencyName">Cargando información...</h1>
+      <p id="emergencyStatus" class="status-text">Obteniendo datos médicos del motociclista.</p>
+    </section>
+
+    <section id="emergencyContent" class="emergency-content" hidden>
+      <article class="info-card highlight-card">
+        <h2>Datos médicos</h2>
+        <dl class="info-list">
+          <div>
+            <dt>Cédula</dt>
+            <dd id="fieldCedula"></dd>
+          </div>
+          <div>
+            <dt>Tipo de sangre</dt>
+            <dd id="fieldBloodType"></dd>
+          </div>
+          <div>
+            <dt>Alergias</dt>
+            <dd id="fieldAllergies"></dd>
+          </div>
+          <div>
+            <dt>Medicamentos</dt>
+            <dd id="fieldMedicines"></dd>
+          </div>
+        </dl>
+      </article>
+
+      <article class="info-card">
+        <h2>Contactos de emergencia</h2>
+        <div id="contactsList" class="emergency-contacts"></div>
+      </article>
+    </section>
+  </main>
+
+  <script src="/js/emergencia.js"></script>
+</body>
+</html>

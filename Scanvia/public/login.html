@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acceso Admin | Scanvia</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="page page-login">
+  <main class="login-shell">
+    <section class="login-hero">
+      <p class="eyebrow">Scanvia · Admin Access</p>
+      <h1>Inicio de sesión para administración</h1>
+      <p class="lead">Accede para registrar, revisar y administrar perfiles de emergencia. La vista pública del QR no requiere sesión.</p>
+      <div class="login-badges">
+        <span class="banner-chip">Panel privado</span>
+        <span class="banner-chip">Sesión protegida</span>
+        <span class="banner-chip">Vista pública libre</span>
+      </div>
+    </section>
+
+    <section class="login-card panel">
+      <div class="preview-card">
+        <span class="preview-tag">Acceso seguro</span>
+        <h2 class="panel-title">Ingresa tus credenciales</h2>
+        <p class="panel-copy">Usa las credenciales de administrador para abrir el panel. Después podrás cerrar sesión desde el mismo dashboard.</p>
+      </div>
+
+      <form id="loginForm" class="login-form">
+        <label>
+          <span>Usuario</span>
+          <input type="text" name="username" autocomplete="username" required>
+        </label>
+        <label>
+          <span>Contraseña</span>
+          <input type="password" name="password" autocomplete="current-password" required>
+        </label>
+        <button type="submit" class="primary-button">Entrar al panel</button>
+        <p id="loginMessage" class="form-message" aria-live="polite"></p>
+      </form>
+    </section>
+  </main>
+
+  <script src="/js/login.js"></script>
+</body>
+</html>

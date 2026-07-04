@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de Administración | Scanvia</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="page page-admin">
+  <main class="container">
+    <section class="hero-card hero-stack">
+      <div class="admin-topbar">
+        <strong>Scanvia · Emergency Identity</strong>
+        <span>Diseñado para lectura rápida, contraste alto y acceso inmediato en carretera.</span>
+        <button type="button" id="logoutBtn" class="secondary-button logout-button">Cerrar sesión</button>
+      </div>
+
+      <div class="hero-copy">
+        <p class="eyebrow">Panel de administración</p>
+        <h1>Registrar perfil QR de motociclista con estilo moderno</h1>
+        <p class="lead">Crea una ficha médica visualmente clara, genera el QR al instante y déjalo listo para usar en una emergencia.</p>
+      </div>
+
+      <div class="hero-kpis">
+        <div class="kpi">
+          <strong>Acceso inmediato</strong>
+          <span>Diseño optimizado para lectura rápida.</span>
+        </div>
+        <div class="kpi">
+          <strong>Base local</strong>
+          <span>Preparado para conexión SQL Server local.</span>
+        </div>
+        <div class="kpi">
+          <strong>QR listo</strong>
+          <span>El enlace se genera al completar el formulario.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="content-grid admin-grid">
+      <form id="adminForm" class="panel form-card">
+        <div class="form-grid">
+          <label>
+            <span>Cédula</span>
+            <input type="text" name="cedula" autocomplete="off" required>
+          </label>
+          <label>
+            <span>Nombre</span>
+            <input type="text" name="nombre" autocomplete="name" required>
+          </label>
+          <label>
+            <span>Tipo de Sangre</span>
+            <input type="text" name="tipoSangre" placeholder="Ej. O+">
+          </label>
+          <label class="full-width">
+            <span>Alergias</span>
+            <textarea name="alergias" rows="3" placeholder="Describe alergias conocidas"></textarea>
+          </label>
+          <label class="full-width">
+            <span>Medicamentos</span>
+            <textarea name="medicamentos" rows="3" placeholder="Medicamentos de uso habitual"></textarea>
+          </label>
+        </div>
+
+        <div class="contacts-header">
+          <div>
+            <h2>Contactos de emergencia</h2>
+            <p>Agrega al menos dos contactos para el QR.</p>
+          </div>
+          <button type="button" id="addContactBtn" class="secondary-button">Agregar contacto</button>
+        </div>
+
+        <div id="contactsContainer" class="contacts-list"></div>
+
+        <button type="submit" class="primary-button">Generar QR</button>
+        <p id="formMessage" class="form-message" aria-live="polite"></p>
+      </form>
+
+      <aside class="admin-side-column">
+        <section class="panel management-card">
+          <div class="panel-heading">
+            <div>
+              <span class="panel-kicker">Solo lectura</span>
+              <h2 class="panel-title">Control de usuarios</h2>
+            </div>
+            <span id="userCountBadge" class="count-badge">0 usuarios</span>
+          </div>
+
+          <label class="search-field">
+            <span>Buscar usuario</span>
+            <input id="userSearchInput" type="search" placeholder="Nombre, cédula o fecha">
+          </label>
+
+          <div id="usersList" class="users-list"></div>
+        </section>
+
+        <section class="panel qr-card preview-frame">
+          <div class="preview-card">
+            <span class="preview-tag">Vista previa en vivo</span>
+            <h2 class="panel-title">Vista de emergencia</h2>
+            <p class="panel-copy">Selecciona un usuario para abrir su ficha pública dentro de esta misma pantalla.</p>
+            <div class="divider-line"></div>
+            <p class="helper-text">La vista es la misma que se abre al escanear el QR generado.</p>
+          </div>
+          <div class="emergency-preview-shell">
+            <div id="previewEmptyState" class="preview-empty-state">
+              <strong>No hay usuario seleccionado</strong>
+              <span>Elige un usuario del panel para ver su vista de emergencia.</span>
+            </div>
+            <iframe id="emergencyPreviewFrame" class="emergency-preview-frame" title="Vista de emergencia" loading="lazy"></iframe>
+          </div>
+          <div id="qrOutput" class="qr-output empty-state">
+            <span>Sin QR generado aún</span>
+          </div>
+          <a id="downloadQrLink" class="secondary-button download-link" href="#" download="qr-emergencia.png" hidden>Descargar QR</a>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <template id="contactTemplate">
+    <div class="contact-card">
+      <div class="contact-row">
+        <label>
+          <span>Nombre</span>
+          <input type="text" name="nombre" required>
+        </label>
+        <label>
+          <span>Relación</span>
+          <input type="text" name="relacion" required>
+        </label>
+      </div>
+      <label>
+        <span>Teléfono</span>
+        <input type="tel" name="telefono" required>
+      </label>
+    </div>
+  </template>
+
+  <script src="/js/admin.js"></script>
+</body>
+</html>

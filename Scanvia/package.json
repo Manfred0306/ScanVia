@@ -1,0 +1,26 @@
+{
+  "name": "scanvia-emergencia-qr",
+  "version": "1.0.0",
+  "description": "Aplicación web para perfiles de emergencia de motociclistas accesibles por QR",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "express",
+    "qrcode",
+    "qr",
+    "emergencia",
+    "motociclistas"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2",
+    "express-session": "^1.18.1",
+    "mssql": "^11.0.1",
+    "msnodesqlv8": "^4.5.0",
+    "qrcode": "^1.5.4"
+  }
+}
