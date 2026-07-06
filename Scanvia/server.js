@@ -154,8 +154,10 @@ app.get('/api/auth/me', (req, res) => {
 
 app.use('/api', createApiRouter(requireAdminApiSession));
 
+// Servir archivos estáticos de public
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Rutas específicas HTML
 app.get('/admin', requireAdminSession, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
@@ -164,10 +166,20 @@ app.get('/admin.html', requireAdminSession, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
+app.get('/login.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+app.get('/emergencia.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'emergencia.html'));
+});
+
+// Redirigir raíz a login
 app.get('/', (req, res) => {
   res.redirect('/login.html');
 });
 
+// Catch-all: intentar servir como archivo estático, si no existe, redirigir a login
 app.use((req, res) => {
   res.status(404).json({ error: 'Ruta no encontrada' });
 });
