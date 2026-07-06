@@ -36,7 +36,9 @@ function createApiRouter(requireAdminApiSession) {
 
       return res.json({ usuarios: usuariosConVista });
     } catch (error) {
-      return res.status(500).json({ error: 'No fue posible listar los usuarios' });
+      console.error('❌ Error listando usuarios:', error.message);
+      console.error(error);
+      return res.status(500).json({ error: `No fue posible listar los usuarios: ${error.message}` });
     }
   });
 
@@ -90,8 +92,10 @@ function createApiRouter(requireAdminApiSession) {
         },
       });
     } catch (error) {
+      console.error('❌ Error creando usuario:', error.message);
+      console.error(error);
       return res.status(500).json({
-        error: 'No fue posible crear el usuario',
+        error: `No fue posible crear el usuario: ${error.message}`,
       });
     }
   });
@@ -116,7 +120,9 @@ function createApiRouter(requireAdminApiSession) {
         createdAt: usuario.createdAt,
       });
     } catch (error) {
-      return res.status(500).json({ error: 'No fue posible cargar el usuario' });
+      console.error('❌ Error cargando usuario:', error.message);
+      console.error(error);
+      return res.status(500).json({ error: `No fue posible cargar el usuario: ${error.message}` });
     }
   });
 

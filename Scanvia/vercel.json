@@ -1,0 +1,20 @@
+{
+  "buildCommand": "echo 'Build completed'",
+  "devCommand": "node server.js",
+  "env": {},
+  "functions": {
+    "api/[...path].js": {
+      "maxDuration": 10
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/[...path]"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/api/[...path]"
+    }
+  ]
+}

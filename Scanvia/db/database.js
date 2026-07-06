@@ -1,159 +1,168 @@
-const { Pool } = require('pg');
+const { createClient } = require('@supabase/supabase-js');
 
-let poolPromise;
+let supabase = null;
 
-async function getPoolWithoutInit() {
-  const connectionString = process.env.SUPABASE_DB_URL || process.env.DATABASE_URL;
+function getSupabaseClient() {
+  if (!supabase) {
+    const projectId = process.env.SUPABASE_PROJECT_ID;
+    const anonKey = process.env.SUPABASE_ANON_KEY;
 
-  if (!connectionString) {
-    throw new Error('Falta la variable de entorno SUPABASE_DB_URL o DATABASE_URL');
+    if (!projectId || !anonKey) {
+      throw new Error('Faltan SUPABASE_PROJECT_ID o SUPABASE_ANON_KEY en .env');
+    }
+
+    const url = `https://${projectId}.supabase.co`;
+    supabase = createClient(url, anonKey);
   }
 
-  if (!poolPromise) {
-    poolPromise = new Pool({
-      connectionString,
-      ssl:
-        process.env.PGSSL === 'false'
-          ? false
-          : {
-              rejectUnauthorized: false,
-            },
-    });
-  }
-
-  return poolPromise;
-}
-
-async function getPool() {
-  return poolPromise;
+  return supabase;
 }
 
 async function initializeDatabase() {
-  return getPoolWithoutInit();
+  try {
+    const client = getSupabaseClient();
+    // Test connection
+    const { error } = await client.from('usuarios').select('id', { count: 'exact', head: true });
+    
+    if (error) {
+      console.warn('Conexión a Supabase con advertencia:', error.message);
+    } else {
+      console.log('✅ Conexión a Supabase exitosa');
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error inicializando base de datos:', error.message);
+    throw error;
+  }
 }
 
 async function createUser(usuario, contactos) {
-  const pool = await getPool();
-  const client = await pool.connect();
+  const client = getSupabaseClient();
 
   try {
-    await client.query('BEGIN');
+    // Insertar usuario
+    const { data: userData, error: userError } = await client
+      .from('usuarios')
+      .insert([
+        {
+          id: usuario.id,
+          cedula: usuario.cedula,
+          nombre: usuario.nombre,
+          tipo_sangre: usuario.tipoSangre || null,
+          alergias: usuario.alergias || null,
+          medicamentos: usuario.medicamentos || null,
+        },
+      ])
+      .select()
+      .single();
 
-    const userResult = await client.query(
-      `
-        INSERT INTO usuarios (
-          id,
-          cedula,
-          nombre,
-          tipo_sangre,
-          alergias,
-          medicamentos
-        ) VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING created_at
-      `,
-      [
-        usuario.id,
-        usuario.cedula,
-        usuario.nombre,
-        usuario.tipoSangre || null,
-        usuario.alergias || null,
-        usuario.medicamentos || null,
-      ]
-    );
-
-    for (let index = 0; index < contactos.length; index += 1) {
-      const contacto = contactos[index];
-
-      await client.query(
-        `
-          INSERT INTO contactos (
-            usuario_id,
-            nombre,
-            relacion,
-            telefono,
-            orden
-          ) VALUES ($1, $2, $3, $4, $5)
-        `,
-        [usuario.id, contacto.nombre, contacto.relacion, contacto.telefono, index]
-      );
+    if (userError) {
+      throw new Error(`Error al crear usuario: ${userError.message}`);
     }
 
-    await client.query('COMMIT');
+    // Insertar contactos
+    const contactosToInsert = contactos.map((contacto, index) => ({
+      usuario_id: usuario.id,
+      nombre: contacto.nombre,
+      relacion: contacto.relacion,
+      telefono: contacto.telefono,
+      orden: index,
+    }));
 
-    const createdAt = userResult.rows[0] ? userResult.rows[0].created_at : new Date().toISOString();
+    const { error: contactosError } = await client
+      .from('contactos')
+      .insert(contactosToInsert);
+
+    if (contactosError) {
+      throw new Error(`Error al crear contactos: ${contactosError.message}`);
+    }
 
     return {
-      createdAt,
+      createdAt: userData.created_at,
     };
   } catch (error) {
-    await client.query('ROLLBACK');
     throw error;
-  } finally {
-    client.release();
   }
 }
 
 async function listUsers() {
-  const pool = await getPool();
-  const result = await pool.query(`
-    SELECT
-      id::text AS id,
-      cedula,
-      nombre,
-      tipo_sangre AS "tipoSangre",
-      alergias,
-      medicamentos,
-      created_at AS "createdAt"
-    FROM usuarios
-    ORDER BY created_at DESC, nombre ASC
-  `);
+  const client = getSupabaseClient();
 
-  return result.rows;
+  try {
+    const { data, error } = await client
+      .from('usuarios')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .order('nombre', { ascending: true });
+
+    if (error) {
+      throw new Error(`Error al listar usuarios: ${error.message}`);
+    }
+
+    return (data || []).map((usuario) => ({
+      id: usuario.id,
+      cedula: usuario.cedula,
+      nombre: usuario.nombre,
+      tipoSangre: usuario.tipo_sangre,
+      alergias: usuario.alergias,
+      medicamentos: usuario.medicamentos,
+      createdAt: usuario.created_at,
+    }));
+  } catch (error) {
+    throw error;
+  }
 }
 
 async function getUserById(id) {
-  const pool = await getPool();
-  const result = await pool.query(
-    `
-      SELECT
-        id::text AS id,
-        cedula,
-        nombre,
-        tipo_sangre AS "tipoSangre",
-        alergias,
-        medicamentos,
-        created_at AS "createdAt"
-      FROM usuarios
-      WHERE id = $1
-    `,
-    [id]
-  );
+  const client = getSupabaseClient();
 
-  if (!result.rows.length) {
-    return null;
+  try {
+    // Obtener usuario
+    const { data: userData, error: userError } = await client
+      .from('usuarios')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (userError) {
+      if (userError.code === 'PGRST116') {
+        return null; // No encontrado
+      }
+      throw new Error(`Error al obtener usuario: ${userError.message}`);
+    }
+
+    if (!userData) {
+      return null;
+    }
+
+    // Obtener contactos
+    const { data: contactosData, error: contactosError } = await client
+      .from('contactos')
+      .select('nombre, relacion, telefono')
+      .eq('usuario_id', id)
+      .order('orden', { ascending: true });
+
+    if (contactosError) {
+      throw new Error(`Error al obtener contactos: ${contactosError.message}`);
+    }
+
+    return {
+      id: userData.id,
+      cedula: userData.cedula,
+      nombre: userData.nombre,
+      tipoSangre: userData.tipo_sangre,
+      alergias: userData.alergias,
+      medicamentos: userData.medicamentos,
+      createdAt: userData.created_at,
+      contactos: contactosData || [],
+    };
+  } catch (error) {
+    throw error;
   }
-
-  const contactosResult = await pool.query(
-    `
-      SELECT
-        nombre,
-        relacion,
-        telefono
-      FROM contactos
-      WHERE usuario_id = $1
-      ORDER BY orden ASC, id ASC
-    `,
-    [id]
-  );
-
-  return {
-    ...result.rows[0],
-    contactos: contactosResult.rows,
-  };
 }
 
 module.exports = {
-  getPool,
   initializeDatabase,
   createUser,
   listUsers,

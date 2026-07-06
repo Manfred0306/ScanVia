@@ -180,6 +180,7 @@ async function startServer() {
   });
 }
 
+// Solo iniciar servidor si se ejecuta directamente (desarrollo local)
 if (require.main === module) {
   startServer().catch((error) => {
     console.error('No fue posible iniciar el servidor:', error.message);
