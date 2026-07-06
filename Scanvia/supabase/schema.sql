@@ -1,0 +1,18 @@
+CREATE TABLE IF NOT EXISTS usuarios (
+  id UUID PRIMARY KEY,
+  cedula VARCHAR(40) NOT NULL,
+  nombre VARCHAR(120) NOT NULL,
+  tipo_sangre VARCHAR(10),
+  alergias TEXT,
+  medicamentos TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS contactos (
+  id BIGSERIAL PRIMARY KEY,
+  usuario_id UUID NOT NULL REFERENCES usuarios (id) ON DELETE CASCADE,
+  nombre VARCHAR(120) NOT NULL,
+  relacion VARCHAR(120) NOT NULL,
+  telefono VARCHAR(40) NOT NULL,
+  orden INTEGER NOT NULL DEFAULT 0
+);

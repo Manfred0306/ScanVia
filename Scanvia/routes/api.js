@@ -2,7 +2,7 @@ const express = require('express');
 const QRCode = require('qrcode');
 const crypto = require('crypto');
 
-const { getPool, sql } = require('../db/database');
+const { createUser, listUsers, getUserById } = require('../db/database');
 
 function normalizeString(value) {
   return typeof value === 'string' ? value.trim() : '';
@@ -22,93 +22,12 @@ function normalizeContacts(contacts) {
     .filter((contact) => contact.nombre || contact.relacion || contact.telefono);
 }
 
-async function createUserWithContacts(usuario, contactos) {
-  const pool = await getPool();
-  const transaction = new sql.Transaction(pool);
-
-  try {
-    await transaction.begin();
-
-    const request = new sql.Request(transaction);
-    request.input('id', sql.UniqueIdentifier, usuario.id);
-    request.input('cedula', sql.NVarChar(40), usuario.cedula);
-    request.input('nombre', sql.NVarChar(120), usuario.nombre);
-    request.input('tipoSangre', sql.NVarChar(10), usuario.tipoSangre || null);
-    request.input('alergias', sql.NVarChar(sql.MAX), usuario.alergias || null);
-    request.input('medicamentos', sql.NVarChar(sql.MAX), usuario.medicamentos || null);
-
-    await request.query(`
-      INSERT INTO dbo.usuarios (
-        id,
-        cedula,
-        nombre,
-        tipo_sangre,
-        alergias,
-        medicamentos
-      ) VALUES (
-        @id,
-        @cedula,
-        @nombre,
-        @tipoSangre,
-        @alergias,
-        @medicamentos
-      )
-    `);
-
-    for (let index = 0; index < contactos.length; index += 1) {
-      const contacto = contactos[index];
-
-      const contactoRequest = new sql.Request(transaction);
-      contactoRequest.input('usuarioId', sql.UniqueIdentifier, usuario.id);
-      contactoRequest.input('nombre', sql.NVarChar(120), contacto.nombre);
-      contactoRequest.input('relacion', sql.NVarChar(120), contacto.relacion);
-      contactoRequest.input('telefono', sql.NVarChar(40), contacto.telefono);
-      contactoRequest.input('orden', sql.Int, index);
-
-      await contactoRequest.query(`
-        INSERT INTO dbo.contactos (
-          usuario_id,
-          nombre,
-          relacion,
-          telefono,
-          orden
-        ) VALUES (
-          @usuarioId,
-          @nombre,
-          @relacion,
-          @telefono,
-          @orden
-        )
-      `);
-    }
-
-    await transaction.commit();
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
-}
-
 function createApiRouter(requireAdminApiSession) {
   const router = express.Router();
 
   router.get('/usuarios', requireAdminApiSession, async (req, res) => {
     try {
-      const pool = await getPool();
-      const result = await pool.request().query(`
-        SELECT
-          CONVERT(VARCHAR(36), id) AS id,
-          cedula,
-          nombre,
-          tipo_sangre AS tipoSangre,
-          alergias,
-          medicamentos,
-          CONVERT(VARCHAR(33), created_at, 126) AS createdAt
-        FROM dbo.usuarios
-        ORDER BY created_at DESC, nombre ASC
-      `);
-
-      const usuarios = result.recordset;
+      const usuarios = await listUsers();
 
       const usuariosConVista = usuarios.map((usuario) => ({
         ...usuario,
@@ -153,7 +72,8 @@ function createApiRouter(requireAdminApiSession) {
         medicamentos: normalizeString(medicamentos),
       };
 
-      await createUserWithContacts(usuario, contactos);
+      const createdUser = await createUser(usuario, contactos);
+      const createdAt = createdUser && createdUser.createdAt ? createdUser.createdAt : new Date().toISOString();
 
       return res.status(201).json({
         message: 'Usuario creado correctamente',
@@ -165,6 +85,7 @@ function createApiRouter(requireAdminApiSession) {
           alergias: usuario.alergias,
           medicamentos: usuario.medicamentos,
           contactos,
+          createdAt,
           qr: qrDataUrl,
         },
       });
@@ -178,43 +99,11 @@ function createApiRouter(requireAdminApiSession) {
   router.get('/usuarios/:id', async (req, res) => {
     try {
       const { id } = req.params;
-      const pool = await getPool();
-      const result = await pool.request()
-        .input('id', sql.UniqueIdentifier, id)
-        .query(`
-          SELECT
-            CONVERT(VARCHAR(36), id) AS id,
-            cedula,
-            nombre,
-            tipo_sangre AS tipoSangre,
-            alergias,
-            medicamentos,
-            CONVERT(VARCHAR(33), created_at, 126) AS createdAt
-          FROM dbo.usuarios
-          WHERE id = @id
-        `);
+      const usuario = await getUserById(id);
 
-      const usuarios = result.recordset;
-
-      if (!usuarios.length) {
+      if (!usuario) {
         return res.status(404).json({ error: 'Usuario no encontrado' });
       }
-
-      const contactosResult = await pool.request()
-        .input('id', sql.UniqueIdentifier, id)
-        .query(`
-          SELECT
-            nombre,
-            relacion,
-            telefono
-          FROM dbo.contactos
-          WHERE usuario_id = @id
-          ORDER BY orden ASC, id ASC
-        `);
-
-      const contactos = contactosResult.recordset;
-
-      const usuario = usuarios[0];
 
       return res.json({
         id: usuario.id,
@@ -223,7 +112,7 @@ function createApiRouter(requireAdminApiSession) {
         tipoSangre: usuario.tipoSangre,
         alergias: usuario.alergias,
         medicamentos: usuario.medicamentos,
-        contactos,
+        contactos: usuario.contactos,
         createdAt: usuario.createdAt,
       });
     } catch (error) {
