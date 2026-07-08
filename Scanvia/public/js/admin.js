@@ -99,6 +99,7 @@ function setEmergencyPreview(url, userName) {
   emergencyPreviewFrame.src = url;
   emergencyPreviewFrame.hidden = false;
   previewEmptyState.hidden = true;
+  previewEmptyState.style.display = 'none';
   if (userName) {
     previewEmptyState.setAttribute('data-selected-user', userName);
   }
@@ -108,7 +109,36 @@ function clearEmergencyPreview() {
   emergencyPreviewFrame.removeAttribute('src');
   emergencyPreviewFrame.hidden = true;
   previewEmptyState.hidden = false;
+  previewEmptyState.style.display = 'grid';
   previewEmptyState.removeAttribute('data-selected-user');
+}
+
+function setQrOutput(qrSrc, emergencyUrl, userName, userId) {
+  if (!qrSrc) {
+    qrOutput.classList.add('empty-state');
+    qrOutput.innerHTML = '<span>Sin QR disponible</span>';
+    downloadQrLink.hidden = true;
+    downloadQrLink.removeAttribute('href');
+    return;
+  }
+
+  qrOutput.classList.remove('empty-state');
+  qrOutput.innerHTML = `
+      <a href="${emergencyUrl}" target="_blank" rel="noopener noreferrer" aria-label="Abrir vista de emergencia">
+        <img src="${qrSrc}" alt="Código QR generado" class="qr-image">
+      </a>
+      <div class="qr-meta">
+        <strong>${userName || 'Usuario seleccionado'}</strong>
+        <span>ID: ${userId || ''}</span>
+        <a href="${emergencyUrl}" target="_blank" rel="noopener noreferrer">Abrir vista de emergencia</a>
+      </div>
+    `;
+  downloadQrLink.href = qrSrc;
+  downloadQrLink.hidden = false;
+}
+
+function getSelectedUser() {
+  return usersCache.find((entry) => entry.id === selectedUserId) || null;
 }
 
 function renderUsersList() {
@@ -158,11 +188,11 @@ function renderUsersList() {
   usersList.querySelectorAll('.user-view-button').forEach((button) => {
     button.addEventListener('click', () => {
       selectedUserId = button.dataset.userId || '';
-      const userUrl = button.dataset.userUrl || '';
-      const user = usersCache.find((entry) => entry.id === selectedUserId);
+      const user = getSelectedUser();
       renderUsersList();
-      if (userUrl) {
-        setEmergencyPreview(userUrl, user ? user.nombre : '');
+      if (user && user.emergenciaUrl) {
+        setEmergencyPreview(user.emergenciaUrl, user.nombre);
+        setQrOutput(user.qr, user.emergenciaUrl, user.nombre, user.id);
       }
     });
   });
@@ -181,8 +211,10 @@ async function loadUsers() {
     if (!selectedUserId && usersCache.length) {
       selectedUserId = usersCache[0].id;
       setEmergencyPreview(usersCache[0].emergenciaUrl, usersCache[0].nombre);
+      setQrOutput(usersCache[0].qr, usersCache[0].emergenciaUrl, usersCache[0].nombre, usersCache[0].id);
     } else if (!usersCache.length) {
       clearEmergencyPreview();
+      setQrOutput('', '', '', '');
     }
 
     renderUsersList();
@@ -245,21 +277,14 @@ form.addEventListener('submit', async (event) => {
     }
 
     const qrSrc = data.usuario.qr;
-    qrOutput.classList.remove('empty-state');
-    qrOutput.innerHTML = `
-      <img src="${qrSrc}" alt="Código QR generado" class="qr-image">
-      <div class="qr-meta">
-        <strong>${data.usuario.nombre}</strong>
-        <span>ID: ${data.usuario.id}</span>
-      </div>
-    `;
-    downloadQrLink.href = qrSrc;
-    downloadQrLink.hidden = false;
+    const emergenciaUrl = data.usuario.emergenciaUrl || `/emergencia.html?id=${data.usuario.id}`;
+    setQrOutput(qrSrc, emergenciaUrl, data.usuario.nombre, data.usuario.id);
     formMessage.textContent = 'Perfil generado correctamente.';
     formMessage.classList.add('success');
     await loadUsers();
     selectedUserId = data.usuario.id;
-    setEmergencyPreview(`/emergencia.html?id=${data.usuario.id}`, data.usuario.nombre);
+    setEmergencyPreview(emergenciaUrl, data.usuario.nombre);
+    setQrOutput(qrSrc, emergenciaUrl, data.usuario.nombre, data.usuario.id);
     renderUsersList();
   } catch (error) {
     qrOutput.classList.add('empty-state');

@@ -9,7 +9,7 @@ const contactsList = document.getElementById('contactsList');
 
 function getUserIdFromUrl() {
   const params = new URLSearchParams(window.location.search);
-  return params.get('id');
+  return params.get('id') || params.get('userId') || params.get('usuarioId');
 }
 
 function renderError(message) {

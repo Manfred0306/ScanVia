@@ -4,6 +4,25 @@ const crypto = require('crypto');
 
 const { createUser, listUsers, getUserById } = require('../db/database');
 
+function getPublicBaseUrl(req) {
+  const explicitBaseUrl = normalizeString(process.env.PUBLIC_BASE_URL);
+
+  if (explicitBaseUrl) {
+    return explicitBaseUrl.replace(/\/$/, '');
+  }
+
+  const forwardedHost = normalizeString(req.get('x-forwarded-host'));
+  const host = forwardedHost || normalizeString(req.get('host'));
+  const forwardedProto = normalizeString(req.get('x-forwarded-proto'));
+  const protocol = forwardedProto || req.protocol || 'https';
+
+  if (!host) {
+    throw new Error('No fue posible determinar la URL pública de la aplicación.');
+  }
+
+  return `${protocol}://${host}`.replace(/\/$/, '');
+}
+
 function normalizeString(value) {
   return typeof value === 'string' ? value.trim() : '';
 }
@@ -28,10 +47,21 @@ function createApiRouter(requireAdminApiSession) {
   router.get('/usuarios', requireAdminApiSession, async (req, res) => {
     try {
       const usuarios = await listUsers();
+      const publicBaseUrl = getPublicBaseUrl(req);
 
-      const usuariosConVista = usuarios.map((usuario) => ({
-        ...usuario,
-        emergenciaUrl: `/emergencia.html?id=${usuario.id}`,
+      const usuariosConVista = await Promise.all(usuarios.map(async (usuario) => {
+        const emergenciaUrl = `${publicBaseUrl}/emergencia.html?id=${usuario.id}`;
+        const qr = await QRCode.toDataURL(emergenciaUrl, {
+          errorCorrectionLevel: 'M',
+          margin: 1,
+          width: 320,
+        });
+
+        return {
+          ...usuario,
+          emergenciaUrl,
+          qr,
+        };
       }));
 
       return res.json({ usuarios: usuariosConVista });
@@ -46,6 +76,7 @@ function createApiRouter(requireAdminApiSession) {
     try {
       const { cedula, nombre, tipoSangre, alergias, medicamentos } = req.body;
       const contactos = normalizeContacts(req.body.contactos);
+      const publicBaseUrl = getPublicBaseUrl(req);
 
       const cedulaNormalizada = normalizeString(cedula);
       const nombreNormalizado = normalizeString(nombre);
@@ -58,7 +89,7 @@ function createApiRouter(requireAdminApiSession) {
       }
 
       const id = crypto.randomUUID();
-      const emergenciaUrl = `${req.protocol}://${req.get('host')}/emergencia.html?id=${id}`;
+      const emergenciaUrl = `${publicBaseUrl}/emergencia.html?id=${id}`;
       const qrDataUrl = await QRCode.toDataURL(emergenciaUrl, {
         errorCorrectionLevel: 'M',
         margin: 1,
@@ -88,6 +119,7 @@ function createApiRouter(requireAdminApiSession) {
           medicamentos: usuario.medicamentos,
           contactos,
           createdAt,
+          emergenciaUrl,
           qr: qrDataUrl,
         },
       });
